@@ -1,108 +1,98 @@
-# app.py
-"""
-Simple backend testing script for models.py and database.py.
-This is NOT part of the Streamlit UI.
-"""
-
+import streamlit as st
 from models import Transaction, ValidationError
 import database
+import analytics
+
+'''
+ Dummy conversion function (1:1)
+ Replace later with real currency_api
+'''
+def convert_dummy(amount, currency):
+    return float(amount)  # no conversion
 
 
-def test_insert():
-    print("=== INSERT TEST ===")
+'''
+ Init database
+'''
+database.init_db()
+database.init_settings()
 
-    try:
-        t = Transaction.create(
-            t_type="Income",
-            amount=150,
-            currency="USD",
-            category="Salary",
-            date_input="2025-02-01"
-        )
-
-        row_id = database.add_transaction(t)
-        print(f"Inserted with ID: {row_id}")
-
-    except ValidationError as e:
-        print("Validation error:", e)
+st.title("Backend Testing Interface")
 
 
-def test_fetch_all():
-    print("\n=== FETCH ALL TEST ===")
+"""
+ADD TRANSACTION (Test models + DB)
+"""
+st.header("Add a Test Transaction")
 
-    rows = database.get_all_transactions()
+with st.form("add_form"):
+    t_type = st.selectbox("Type", ["Income", "Expense"])
+    amount = st.number_input("Amount", min_value=0.0, step=0.1)
+    currency = st.selectbox("Currency", ["USD", "MMK", "EUR"])
+    category = st.text_input("Category")
+    date_input = st.date_input("Date")
 
-    if not rows:
-        print("No transactions found.")
-    else:
-        for row in rows:
-            print(dict(row))
+    submitted = st.form_submit_button("Add Transaction")
 
+    if submitted:
+        try:
+            t = Transaction.create(
+                t_type=t_type,
+                amount=float(amount),
+                currency=currency,
+                category=category,
+                date_input=str(date_input)
+            )
+            row_id = database.add_transaction(t)
+            st.success(f"Inserted with ID {row_id}")
 
-def test_update():
-    print("\n=== UPDATE TEST ===")
-
-    rows = database.get_all_transactions()
-    if not rows:
-        print("Cannot update — no rows.")
-        return
-
-    first_row = rows[0]
-    row_id = first_row["id"]
-
-    try:
-        updated_transaction = Transaction.create(
-            t_type="Expense",
-            amount=50,
-            currency="USD",
-            category="Groceries",
-            date_input="2025-02-02"
-        )
-
-        success = database.update_transaction(row_id, updated_transaction)
-        print("Update successful?" , success)
-
-    except ValidationError as e:
-        print("Validation error:", e)
+        except ValidationError as e:
+            st.error(f"Validation error: {e}")
 
 
-def test_delete():
-    print("\n=== DELETE TEST ===")
+"""
+VIEW ALL TRANSACTIONS
+"""
+st.header("All Transactions in DB")
 
-    rows = database.get_all_transactions()
-    if not rows:
-        print("Cannot delete — no rows.")
-        return
-
-    row_id = rows[-1]["id"]  # delete last row for safety
-
-    success = database.delete_transaction(row_id)
-    print("Deleted?", success)
+rows = database.get_all_transactions()
+if rows:
+    st.table([dict(r) for r in rows])
+else:
+    st.info("No transactions found.")
 
 
-def test_settings():
-    print("\n=== SETTINGS TEST ===")
+"""
+ANALYTICS: TOTALS
+"""
+st.header("Analytics — Totals")
 
-    print("Current base currency:", database.get_setting("base_currency"))
-
-    database.set_setting("base_currency", "MMK")
-    print("Updated base currency:", database.get_setting("base_currency"))
-
-    # Reset if needed
-    database.set_setting("base_currency", "USD")
+totals = analytics.compute_totals(convert_dummy)
+st.write(totals)
 
 
-if __name__ == "__main__":
-    print("Initializing DB...")
-    database.init_db()
-    database.init_settings()
+"""
+ANALYTICS: CATEGORY BREAKDOWN
+"""
+st.header("Analytics — Category Breakdown")
 
-    test_insert()
-    test_fetch_all()
-    test_update()
-    test_fetch_all()
-    test_delete()
-    test_fetch_all()
-    test_settings()
+category_data = analytics.category_breakdown(convert_dummy)
+st.write(category_data)
 
-    print("\nAll tests completed.")
+
+"""
+ANALYTICS: MONTHLY SUMMARY
+"""
+st.header("Analytics — Monthly Summary (Income/Expense per month)")
+
+monthly = analytics.monthly_summary(convert_dummy)
+st.write(monthly)
+
+
+"""
+FORECAST
+"""
+st.header("Forecast Next Month (3-month average)")
+
+forecast = analytics.forecast_next_month(convert_dummy)
+st.write(f"Predicted next month net: {forecast}")

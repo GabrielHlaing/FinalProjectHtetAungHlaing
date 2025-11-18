@@ -73,7 +73,7 @@ def get_all_transactions() -> List[sqlite3.Row]:
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute("SELECT * FROM transactions ORDER BY date DESC;")
+    cursor.execute("SELECT * FROM transactions ORDER BY id;")
     rows = cursor.fetchall()
 
     conn.close()
