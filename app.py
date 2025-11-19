@@ -2,33 +2,26 @@ import streamlit as st
 from models import Transaction, ValidationError
 import database
 import analytics
+import currency_api
 
-'''
- Dummy conversion function (1:1)
- Replace later with real currency_api
-'''
-def convert_dummy(amount, currency):
-    return float(amount)  # no conversion
-
-
-'''
- Init database
-'''
+# --------------------------------------------
+# Initialize DB + settings
+# --------------------------------------------
 database.init_db()
 database.init_settings()
 
-st.title("Backend Testing Interface")
+st.title("Backend Testing Interface (With Currency API)")
 
 
-"""
-ADD TRANSACTION (Test models + DB)
-"""
+# ======================================================
+# 1. ADD TRANSACTION (Test models + DB)
+# ======================================================
 st.header("Add a Test Transaction")
 
 with st.form("add_form"):
     t_type = st.selectbox("Type", ["Income", "Expense"])
     amount = st.number_input("Amount", min_value=0.0, step=0.1)
-    currency = st.selectbox("Currency", ["USD", "MMK", "EUR"])
+    currency = st.selectbox("Currency", currency_api.get_currency_list())
     category = st.text_input("Category")
     date_input = st.date_input("Date")
 
@@ -50,9 +43,9 @@ with st.form("add_form"):
             st.error(f"Validation error: {e}")
 
 
-"""
-VIEW ALL TRANSACTIONS
-"""
+# ======================================================
+# 2. VIEW ALL TRANSACTIONS
+# ======================================================
 st.header("All Transactions in DB")
 
 rows = database.get_all_transactions()
@@ -62,37 +55,57 @@ else:
     st.info("No transactions found.")
 
 
-"""
-ANALYTICS: TOTALS
-"""
-st.header("Analytics — Totals")
+# ======================================================
+# 3. BASE CURRENCY SETTINGS
+# ======================================================
+st.header("Currency Conversion Testing")
 
-totals = analytics.compute_totals(convert_dummy)
+current_base = database.get_setting("base_currency")
+st.write(f"Current base currency: **{current_base}**")
+
+new_base = st.selectbox("Change Base Currency", currency_api.get_currency_list())
+
+if st.button("Save Base Currency"):
+    database.set_setting("base_currency", new_base)
+    st.success(f"Base currency set to {new_base}")
+
+
+# Helper wrapper around currency_api
+def convert_live(amount, currency):
+    return currency_api.convert_to_base(amount, currency)
+
+
+# ======================================================
+# 4. ANALYTICS — TOTALS
+# ======================================================
+st.header("Analytics — Totals (Converted to Base Currency)")
+
+totals = analytics.compute_totals(convert_live)
 st.write(totals)
 
 
-"""
-ANALYTICS: CATEGORY BREAKDOWN
-"""
+# ======================================================
+# 5. CATEGORY BREAKDOWN
+# ======================================================
 st.header("Analytics — Category Breakdown")
 
-category_data = analytics.category_breakdown(convert_dummy)
+category_data = analytics.category_breakdown(convert_live)
 st.write(category_data)
 
 
-"""
-ANALYTICS: MONTHLY SUMMARY
-"""
-st.header("Analytics — Monthly Summary (Income/Expense per month)")
+# ======================================================
+# 6. MONTHLY SUMMARY
+# ======================================================
+st.header("Analytics — Monthly Summary (Income/Expense per Month)")
 
-monthly = analytics.monthly_summary(convert_dummy)
+monthly = analytics.monthly_summary(convert_live)
 st.write(monthly)
 
 
-"""
-FORECAST
-"""
+# ======================================================
+# 7. FORECAST (Uses last 3 months)
+# ======================================================
 st.header("Forecast Next Month (3-month average)")
 
-forecast = analytics.forecast_next_month(convert_dummy)
+forecast = analytics.forecast_next_month(convert_live)
 st.write(f"Predicted next month net: {forecast}")
