@@ -1,11 +1,11 @@
 import streamlit as st
 import plotly.express as px
 import pandas as pd
-from models import Transaction, ValidationError
-from analytics import compute_totals, monthly_summary, category_breakdown, forecast_next_month
-from currency_api import convert_to_base, get_currency_list
+from api.currency_api import convert_to_base, get_currency_list
 from datetime import datetime
-from database import (
+from core.models import Transaction, ValidationError
+from core.analytics import compute_totals, monthly_summary, category_breakdown, forecast_next_month
+from core.database import (
     init_db, add_transaction, get_all_transactions,
     delete_transaction, update_transaction,
     init_settings, get_setting, set_setting
@@ -268,7 +268,7 @@ with tab3:
     # Live Rate Viewer
     st.subheader("Live Exchange Rate")
 
-    from currency_api import get_rate
+    from api.currency_api import get_rate
 
     compare_currency = st.selectbox("Compare Against", CURRENCIES)
 

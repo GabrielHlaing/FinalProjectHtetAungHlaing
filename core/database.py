@@ -2,7 +2,7 @@
 
 import sqlite3
 from typing import List
-from models import Transaction
+from core.models import Transaction
 import os
 
 DB_NAME = os.path.join(os.path.dirname(__file__), "moneytracker.db")

@@ -1,8 +1,8 @@
 # currency_api.py
 
 import requests
-from api_key import EXCHANGE_API_KEY
-from database import get_setting
+from api.api_key import EXCHANGE_API_KEY
+from core.database import get_setting
 
 # -------------------------------
 # In-memory live rate storage

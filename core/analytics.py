@@ -1,7 +1,7 @@
 # analytics.py
 
 from typing import Dict, List
-from database import get_all_transactions
+from core.database import get_all_transactions
 
 
 # --------------------------------------------------
