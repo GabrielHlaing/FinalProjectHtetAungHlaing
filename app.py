@@ -22,6 +22,10 @@ init_settings()
 CURRENCIES = get_currency_list()
 base_currency = get_setting("base_currency")
 
+if "message" not in st.session_state:
+    st.session_state["message"] = None
+
+st.title("Money Tracker")
 
 # -----------------------------------------------------
 # Tabs
@@ -47,29 +51,6 @@ with tab1:
 
     st.markdown("---")
 
-    # Category Breakdown
-    st.subheader("Spending by Category")
-    breakdown = category_breakdown(convert_to_base)
-
-    if breakdown:
-        df_breakdown = pd.DataFrame({
-            "Category": list(breakdown.keys()),
-            "Amount": list(breakdown.values())
-        })
-
-        fig = px.bar(
-            df_breakdown,
-            x="Category",
-            y="Amount",
-            title=f"Category Breakdown (Converted to {base_currency})",
-            text="Amount"
-        )
-        st.plotly_chart(fig, use_container_width=True)
-    else:
-        st.info("Not enough data for category chart.")
-
-    st.markdown("---")
-
     # Monthly Summary
     st.subheader("Monthly Income vs Expense")
     monthly = monthly_summary(convert_to_base)
@@ -77,7 +58,10 @@ with tab1:
     if monthly:
         months, incomes, expenses = [], [], []
         for m, vals in sorted(monthly.items()):
-            months.append(m)
+            # m is "YYYY-MM" -> convert to "Jan 2025"
+            formatted = datetime.strptime(m, "%Y-%m").strftime("%b %Y")
+            months.append(formatted)
+
             incomes.append(vals["income"])
             expenses.append(vals["expense"])
 
@@ -87,18 +71,78 @@ with tab1:
             "Expense": expenses
         })
 
+        # Custom colors
+        color_map = {
+            "Income": "green",
+            "Expense": "red"
+        }
+
         fig2 = px.bar(
             df_monthly,
             x="Month",
             y=["Income", "Expense"],
             barmode="group",
-            title="Monthly Income vs Expenses"
+            title="Monthly Income vs Expenses",
+            color_discrete_map=color_map
         )
+
+        fig2.update_layout(
+            yaxis_title=f"Amount ({base_currency})",
+            xaxis_title="Month",
+            bargap=0.25
+        )
+
         st.plotly_chart(fig2, use_container_width=True)
+
     else:
         st.info("Not enough data for monthly summary.")
 
     st.markdown("---")
+
+    # Category Breakdown
+    st.subheader("Spending by Category")
+    breakdown = category_breakdown(convert_to_base)
+
+    if breakdown:
+        categories = list(breakdown.keys())
+        amounts = [info["amount"] for info in breakdown.values()]
+        types = [info["type"] for info in breakdown.values()]
+
+        # Build DataFrame correctly
+        df_breakdown = pd.DataFrame({
+            "Category": categories,
+            "Amount": amounts,
+            "Type": types
+        })
+
+        # Colors: green for income, red for expense
+        colors = ["green" if t == "Income" else "red" for t in types]
+
+        fig = px.bar(
+            df_breakdown,
+            x="Category",
+            y="Amount",
+            title=f"Category Breakdown (Converted to {base_currency})",
+            text="Amount",
+        )
+
+        # Override bar colors manually
+        fig.update_traces(marker_color=colors)
+
+        fig.update_layout(
+            yaxis_title=f"Amount ({base_currency})",
+            xaxis_title="Category",
+            bargap=0.25,
+            showlegend=False  # hide the auto legend
+        )
+
+        st.plotly_chart(fig, use_container_width=True)
+
+    else:
+        st.info("Not enough data for category chart.")
+
+    st.markdown("---")
+
 
     # Net Balance Trend
     st.subheader("Net Balance Over Time")
@@ -124,18 +168,39 @@ with tab1:
 
     # Forecast
     st.subheader("Next Month Forecast")
-    forecast_value = forecast_next_month(convert_to_base)
-    st.metric("Forecasted Net Balance", forecast_value)
 
+    forecast_value = forecast_next_month(convert_to_base)
+    delta = forecast_value - totals["net"]
+
+    st.metric(
+        label="Forecasted Net Balance",
+        value=f"{forecast_value:,.2f} {base_currency}",
+        delta=f"{delta:,.2f} {base_currency}"
+    )
 
 # -----------------------------------------------------
 # TAB 2: TRANSACTIONS CRUD
 # -----------------------------------------------------
 with tab2:
-    st.header("Add or Manage Transactions")
+    st.header("Manage Transactions")
 
-    # Add Transaction
-    with st.expander("Add New Transaction"):
+    # Show persisted messages
+    if st.session_state["message"]:
+        msg_type, msg_text = st.session_state["message"]
+        if msg_type == "success":
+            st.success(msg_text)
+        elif msg_type == "error":
+            st.error(msg_text)
+        st.session_state["message"] = None
+
+    # Transaction pages as sub-tabs
+    tabA, tabB, tabC = st.tabs(["Add Transaction", "View Transactions", "Edit/Delete"])
+
+    # ---------------------------------------------------------
+    # PAGE 1: ADD TRANSACTION
+    # ---------------------------------------------------------
+    with tabA:
+
         with st.form("add_transaction_form"):
             t_type = st.selectbox("Type", ["Income", "Expense"])
             amount = st.number_input("Amount", min_value=0.0, step=0.5)
@@ -155,35 +220,43 @@ with tab2:
                         date_input=str(date)
                     )
                     add_transaction(tx)
-                    st.success("Transaction added successfully.")
-                    st.rerun()
+                    st.session_state["message"] = ("success", "Transaction added successfully.")
                 except ValidationError as e:
-                    st.error(f"Error: {e}")
+                    st.session_state["message"] = ("error", str(e))
+                st.rerun()
 
-    # View Transactions
-    with st.expander("View Transactions"):
+    # ---------------------------------------------------------
+    # PAGE 2: VIEW TRANSACTIONS
+    # ---------------------------------------------------------
+    with tabB:
+
         rows = get_all_transactions()
 
         if not rows:
             st.info("No transactions yet.")
         else:
-            df_display = pd.DataFrame(rows)
-            df_display.columns = ["ID", "Type", "Amount", "Currency", "Category", "Date"]
-            st.dataframe(df_display, hide_index=True)
+            df = pd.DataFrame(rows)
+            df.columns = ["ID", "Type", "Amount", "Currency", "Category", "Date"]
+            st.dataframe(df, hide_index=True)
 
-    # Edit / Delete
-    with st.expander("Edit or Delete Transactions"):
+    # ---------------------------------------------------------
+    # PAGE 3: EDIT / DELETE
+    # ---------------------------------------------------------
+    with tabC:
+
         rows = get_all_transactions()
 
         if not rows:
             st.info("No transactions to modify.")
         else:
             row_ids = [row["id"] for row in rows]
-            selected_id = st.selectbox("Select a transaction ID:", row_ids)
+            selected_id = st.selectbox("Select a transaction ID", row_ids)
+
             selected_row = next(r for r in rows if r["id"] == selected_id)
 
-            # Edit
-            st.subheader("Edit Transaction")
+            # Edit Form
+            st.markdown("#### Edit Transaction")
+            st.caption("Modify the fields below and save changes.")
 
             with st.form("edit_form"):
                 new_type = st.selectbox(
@@ -191,25 +264,15 @@ with tab2:
                     ["Income", "Expense"],
                     index=["Income", "Expense"].index(selected_row["t_type"])
                 )
-
                 new_amount = st.number_input(
-                    "Amount",
-                    min_value=0.0,
-                    step=0.5,
-                    value=float(selected_row["amount"])
+                    "Amount", min_value=0.0, step=0.5, value=float(selected_row["amount"])
                 )
-
                 new_currency = st.selectbox(
-                    "Currency",
-                    CURRENCIES,
-                    index=CURRENCIES.index(selected_row["currency"])
+                    "Currency", CURRENCIES, index=CURRENCIES.index(selected_row["currency"])
                 )
-
                 new_category = st.text_input("Category", selected_row["category"])
-
                 new_date = st.date_input(
-                    "Date",
-                    datetime.strptime(selected_row["date"], "%Y-%m-%d")
+                    "Date", datetime.strptime(selected_row["date"], "%Y-%m-%d")
                 )
 
                 edit_submitted = st.form_submit_button("Save Changes")
@@ -224,24 +287,28 @@ with tab2:
                             date_input=str(new_date)
                         )
                         ok = update_transaction(selected_id, tx_updated)
-
                         if ok:
-                            st.success("Transaction updated.")
-                            st.rerun()
+                            st.session_state["message"] = ("success", "Transaction updated.")
                         else:
-                            st.error("Update failed.")
-
+                            st.session_state["message"] = ("error", "Update failed.")
                     except ValidationError as e:
-                        st.error(f"Error: {e}")
+                        st.session_state["message"] = ("error", str(e))
+                    st.rerun()
 
-            # Delete
-            st.subheader("Delete Transaction")
+            st.divider()  # break
+
+            # Delete Section
+            st.markdown("#### Delete Transaction")
+            st.caption("This action cannot be undone.")
+
             if st.button("Delete Selected Transaction"):
                 if delete_transaction(selected_id):
-                    st.success("Transaction deleted.")
-                    st.rerun()
+                    st.session_state["message"] = ("success", "Transaction deleted.")
                 else:
-                    st.error("Delete failed.")
+                    st.session_state["message"] = ("error", "Delete failed.")
+                st.rerun()
+
+    st.markdown("---")
 
 
 # -----------------------------------------------------
@@ -250,8 +317,12 @@ with tab2:
 with tab3:
     st.header("Settings")
 
+    # ------------------------------
     # Base Currency
+    # ------------------------------
     st.subheader("Base Currency")
+
+    st.caption(f"Current base currency: **{base_currency}**")
 
     new_base = st.selectbox(
         "Select Base Currency",
@@ -265,26 +336,46 @@ with tab3:
 
     st.markdown("---")
 
-    # Live Rate Viewer
+    # ------------------------------
+    # Live Exchange Rate Viewer
+    # ------------------------------
     st.subheader("Live Exchange Rate")
 
     from api.currency_api import get_rate
 
+
     compare_currency = st.selectbox("Compare Against", CURRENCIES)
 
+
     if compare_currency == base_currency:
-        st.info("Select a different currency.")
+        st.info("Select a different currency to view the rate.")
     else:
         rate = get_rate(base_currency, compare_currency)
-        st.metric(
-            label=f"1 {compare_currency} equals",
-            value=f"{rate:.4f} {base_currency}"
+
+        # Display in card style
+        st.markdown(
+            f"""
+            <div style="
+                padding:10px;
+                border-radius:8px;
+                background-color:#F5F5F5;
+                color:#000;
+                text-align:center;
+            ">
+                <h3>1 {compare_currency} = {rate:.4f} {base_currency}</h3>
+            </div>
+            """,
+            unsafe_allow_html=True
         )
 
     st.markdown("---")
 
+    # ------------------------------
+    # About Section
+    # ------------------------------
     st.subheader("About Base Currency")
-    st.info("""
-    All income and expenses are converted to the base currency.
-    Conversion uses the latest live exchange rates from the backend API.
-    """)
+    st.info(
+        "All income and expenses are automatically converted to the base currency. "
+        "Live exchange rates are fetched from the backend API. "
+    )
+

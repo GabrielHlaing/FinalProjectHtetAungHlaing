@@ -48,10 +48,15 @@ def compute_totals(convert_func) -> Dict[str, float]:
 # --------------------------------------------------
 # Breakdown by category
 # --------------------------------------------------
-def category_breakdown(convert_func) -> Dict[str, float]:
+def category_breakdown(convert_func):
     """
-    Returns: {"Food": 150.0, "Salary": 1000.0, ...}
+    Returns:
+    {
+        "Food": {"amount": 150.0, "type": "Expense"},
+        "Salary": {"amount": 1000.0, "type": "Income"},
+    }
     """
+
     rows = _rows_to_dicts(get_all_transactions())
 
     breakdown = {}
@@ -59,14 +64,20 @@ def category_breakdown(convert_func) -> Dict[str, float]:
     for row in rows:
         converted = convert_func(row["amount"], row["currency"])
         cat = row["category"]
+        t_type = row["t_type"]  # Income or Expense
 
         if cat not in breakdown:
-            breakdown[cat] = 0.0
+            breakdown[cat] = {"amount": 0.0, "type": t_type}
 
-        # Expenses positive, income positive — all mixed for summary
-        breakdown[cat] += converted
+        # Keep the type from the first encounter of this category
+        breakdown[cat]["amount"] += converted
 
-    return {cat: round(val, 2) for cat, val in breakdown.items()}
+    # Round amounts
+    for cat in breakdown:
+        breakdown[cat]["amount"] = round(breakdown[cat]["amount"], 2)
+
+    return breakdown
+
 
 
 # --------------------------------------------------
