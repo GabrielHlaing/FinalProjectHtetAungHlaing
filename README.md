@@ -1,82 +1,106 @@
 ### INF601 - Advanced Programming in Python
 ### Htet Aung Hlaing
-### Mini Project 4
+### Final Project
 
 # Project Title
-Mini Project 4: Event Management and Booking Web Application
+Multi-currency Money Tracker
 
-## Description
-- This project is a full-stack event management and booking system built using **Django**.
-- It allows users to register, log in, view events, and book available seats.
-- Admins can add, edit, and delete events through the Django Admin panel.
-- Users can also submit feedback and manage their bookings.
+A simple yet powerful personal finance tracker built with **Python**, **Streamlit**, and **SQLite**.  
+It supports multiple currencies using live conversion rates and provides visual dashboards for income, expenses, and category breakdowns.
 
-The app uses **Bootstrap 5** for a clean and responsive interface, including modals for confirmation dialogs, styled forms, and a mobile-friendly navigation bar.
+## Features
+ 
+- Dashboard with:
+  - Category breakdown (colored by income/expense)
+  - Monthly income vs expense chart
+  - Net balance trend chart
+  - Next-month forecast
+- Add, view, edit, and delete transactions  
+- Multi-currency support with live exchange rate conversion 
+- Settings system with persistent base currency
+- Clean UI using Streamlit components
+
+## Tech Stack
+
+- **Python**
+- **Streamlit**
+- **Plotly Express**
+- **SQLite** (via custom database layer)
+- **Requests** (for live currency API)
+- Modular architecture (core/, api/, tabs/)
+
+## Project Structure
+```
+MoneyTracker/
+│
+├── api/
+│ ├── currency_api.py
+│ └── api_key.py
+│
+├── core/
+│ ├── analytics.py
+│ ├── database.py
+│ └── models.py
+│
+├── tabs/
+│ ├── dashboard.py
+│ ├── transactions.py
+│ └── settings.py
+│
+├── app.py
+├── .gitignore
+├── requirements.txt
+└── README.md
+```
 
 ## Getting Started
 
-### Dependencies
-* Install the required packages using:
-```
+### 1. Install Dependencies
+```commandline
 pip install -r requirements.txt
 ```
-* Set settings file location in the Django configuration. By default, it is `mysite\settings.py`
+### 2. Insert API key
+Go to `api/api_key.py` and insert the `EXCHANGE_API_KEY` value with the given API key from Exchange Rate Host.
 
-### Go to the Project Directory
-* Move to the project directory by:
+### 3. Run the app
 ```commandline
-cd EventBoard
+streamlit run app.py
+```
+### 4. Visit the app
+* The browser will automatically open along with the app.
+* If the browser does not open, go to the url: http://localhost:8501
+
+## How Currency Conversion Works
+
+- Base currency is stored in a settings table  
+- All amounts are converted automatically using `convert_to_base()`  
+- The conversion function uses live API rates with minimal API usage  
+- Cached once per session to avoid unnecessary calls  
+
+## Adding New Currencies
+
+Simply edit the global list in `currency_api.py`:
+
+```
+CURRENCY_LIST = ["USD", "MMK", "EUR", "JPY", "SGD", "THB", "CNY", Add Here]
 ```
 
-### Database Setup
-* Create and apply database migrations using:
-```
-python manage.py makemigrations
-```
-```
-python manage.py migrate
-```
+No other changes required.
 
-### Create a Superuser (for Admin Access)
-* Run the following command and follow the prompts:
-```
-python manage.py createsuperuser
-```
-* Then set up admin account by entering name, email, and password.
+## Notes
 
-### Running the Server
-* Start the Django development server with:
-```
-python manage.py runserver
-```
-* Then open your browser and visit:
-http://127.0.0.1:8000/
-* To access admin panel, open:
-http://127.0.0.1:8000/admin and login using the created name and password.
+- Streamlit reruns the script on UI updates.  
+- Success and error messages persist using `st.session_state["message"]`.  
+- Write operations (`add`, `delete`, `update`) auto-refresh via `st.rerun()`.
 
-
-## Features
-* User registration, login, and logout
-* Event listing with filtering and details page
-* Seat booking system with seat availability tracking
-* Booking history with cancellation confirmation modal
-* Previous event filtering by time period
-* Feedback form with interactive star rating system
-* Django admin panel for event and user management
-* Flash message system for user feedback (success/error)
-* Responsive Bootstrap 5 design
-
-## Authors
-* Htet Aung Hlaing
+## Author
+Htet Aung Hlaing
 
 ## Version History
-* 1.0
-    * Complete Django event booking system
-    * Styled pages for events, feedback, and bookings
-    * Bootstrap 5 responsive layout integrated
+- 1.0 
 
 ## Acknowledgments
-* [Django Documentation](https://docs.djangoproject.com/en/5.2/)
-* [Bootstrap 5](https://getbootstrap.com/)
-* [SQLite](https://www.sqlite.org/)
-* [Django Tutorial](https://docs.djangoproject.com/en/5.2/intro/tutorial01/)
+- [Streamlit Documentation](9https://docs.streamlit.io/)
+- [Plotly Express](https://plotly.com/python/plotly-express/)
+- [SQLite](https://www.sqlite.org/)
+- [Exchange Host API](https://exchangerate.host/)
