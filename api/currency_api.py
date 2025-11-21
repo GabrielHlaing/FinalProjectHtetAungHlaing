@@ -75,12 +75,11 @@ def get_rate(base: str, quote: str) -> float:
         return LATEST_RATES[key]
 
     # Fetch live rate
-    # Right now, it is commented out because using fetch_rate_from_api will cost free API uses
-    # live_rate = fetch_rate_from_api(base, quote)
-    #
-    # if live_rate is not None:
-    #     LATEST_RATES[key] = live_rate
-    #     return live_rate
+    live_rate = fetch_rate_from_api(base, quote)
+
+    if live_rate is not None:
+        LATEST_RATES[key] = live_rate
+        return live_rate
 
     # Fallback
     if base == "USD" and quote == "MMK":
