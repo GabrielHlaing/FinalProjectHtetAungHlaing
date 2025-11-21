@@ -17,9 +17,6 @@ init_settings()
 CURRENCIES = get_currency_list()
 base_currency = get_setting("base_currency")
 
-if "message" not in st.session_state:
-    st.session_state["message"] = None
-
 st.title("Money Tracker")
 
 # ---------------------------------------------
@@ -31,7 +28,7 @@ with tab1:
     dashboard.render(convert_to_base, base_currency)
 
 with tab2:
-    transactions.render(convert_to_base, base_currency, CURRENCIES)
+    transactions.render(CURRENCIES)
 
 with tab3:
     settings.render(convert_to_base, base_currency, CURRENCIES)

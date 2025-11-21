@@ -8,15 +8,11 @@ from core.database import (
     delete_transaction, update_transaction
 )
 
-def render(convert_to_base, base_currency, CURRENCIES):
+def render(multi_currencies):
 
     st.header("Manage Transactions")
 
-    # Flash message
-    if st.session_state["message"]:
-        msg_type, msg_text = st.session_state["message"]
-        getattr(st, msg_type)(msg_text)
-        st.session_state["message"] = None
+    show_message()
 
     tabA, tabB, tabC = st.tabs([
         "Add Transaction", "View Transactions", "Edit/Delete"
@@ -28,10 +24,13 @@ def render(convert_to_base, base_currency, CURRENCIES):
     with tabA:
         st.subheader("Add New Transaction")
 
-        with st.form("add_form"):
+        # form reset
+        form_key = f"add_form_{st.session_state.get('form_reset', 0)}"
+
+        with st.form(key=form_key):
             t_type = st.selectbox("Type", ["Income", "Expense"])
             amount = st.number_input("Amount", min_value=0.0, step=0.5)
-            currency = st.selectbox("Currency", CURRENCIES)
+            currency = st.selectbox("Currency", multi_currencies)
             category = st.text_input("Category")
             date = st.date_input("Date")
 
@@ -48,6 +47,10 @@ def render(convert_to_base, base_currency, CURRENCIES):
                 except ValidationError as e:
                     st.session_state["message"] = ("error", str(e))
 
+                # trigger form reset
+                st.session_state["form_reset"] = (
+                    st.session_state.get("form_reset", 0) + 1
+                )
                 st.rerun()
 
     # ------------------------
@@ -80,20 +83,19 @@ def render(convert_to_base, base_currency, CURRENCIES):
         selected = next(r for r in rows if r["id"] == selected_id)
 
         # ----- Edit -----
-        st.markdown("### Edit Transaction")
+        st.write("### Edit Transaction")
 
-        with st.form("edit_form"):
+        with st.form(key="edit_form"):
             new_type = st.selectbox(
                 "Type", ["Income", "Expense"],
                 index=["Income", "Expense"].index(selected["t_type"])
             )
             new_amount = st.number_input(
-                "Amount", min_value=0.0, step=0.5,
-                value=float(selected["amount"])
+                "Amount", min_value=0.0, step=0.5, value=float(selected["amount"])
             )
             new_currency = st.selectbox(
-                "Currency", CURRENCIES,
-                index=CURRENCIES.index(selected["currency"])
+                "Currency", multi_currencies,
+                index=multi_currencies.index(selected["currency"])
             )
             new_category = st.text_input("Category", selected["category"])
             new_date = st.date_input(
@@ -109,11 +111,11 @@ def render(convert_to_base, base_currency, CURRENCIES):
                         currency=new_currency, category=new_category,
                         date_input=str(new_date)
                     )
-                    success = update_transaction(selected_id, updated)
-                    if success:
+                    ok = update_transaction(selected_id, updated)
+                    if ok:
                         st.session_state["message"] = ("success", "Transaction updated.")
                     else:
-                        st.session_state["message"] = ("error", "Update failed.")
+                        st.session_state["message"] = ("error", "Transaction failed.")
                 except ValidationError as e:
                     st.session_state["message"] = ("error", str(e))
 
@@ -122,11 +124,21 @@ def render(convert_to_base, base_currency, CURRENCIES):
         st.divider()
 
         # ----- Delete -----
-        st.markdown("### Delete Transaction")
-
+        st.write("### Delete Transaction")
         if st.button("Delete Transaction"):
             if delete_transaction(selected_id):
                 st.session_state["message"] = ("success", "Transaction deleted.")
             else:
                 st.session_state["message"] = ("error", "Delete failed.")
             st.rerun()
+
+# Function for showing flash messages
+def show_message():
+    # Show flashed message (if any)
+    if "message" in st.session_state:
+        msg_type, msg_text = st.session_state["message"]
+        if msg_type == "success":
+            st.success(msg_text)
+        elif msg_type == "error":
+            st.error(msg_text)
+        del st.session_state["message"]   # Remove after showing once

@@ -16,9 +16,9 @@ def render(convert_to_base, base_currency):
     totals = compute_totals(convert_to_base)
 
     col1, col2, col3 = st.columns(3)
-    col1.metric("Total Income", totals["income"])
-    col2.metric("Total Expenses", totals["expense"])
-    col3.metric("Net Balance", totals["net"])
+    col1.metric(f"Total Income ({base_currency})", totals["income"])
+    col2.metric(f"Total Expenses ({base_currency})", totals["expense"])
+    col3.metric(f"Net Balance ({base_currency})", totals["net"])
 
     st.markdown("---")
 
