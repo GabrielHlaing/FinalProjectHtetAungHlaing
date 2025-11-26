@@ -1,18 +1,19 @@
+# settings.py
 import streamlit as st
 from api.currency_api import get_rate
 from core.database import set_setting
 
-def render(convert_to_base, base_currency, CURRENCIES):
+def render(base_currency, multi_currencies):
 
     st.header("Settings")
 
-    # -------------------------
-    # Base Currency Selector
-    # -------------------------
+    # ---------------------------------
+    # Base Currency
+    # ---------------------------------
     st.subheader("Base Currency")
     st.caption(f"Current base currency: **{base_currency}**")
 
-    new_base = st.selectbox("Select Base Currency", CURRENCIES)
+    new_base = st.selectbox("Select Base Currency", multi_currencies)
 
     if st.button("Save Settings"):
         set_setting("base_currency", new_base)
@@ -20,12 +21,12 @@ def render(convert_to_base, base_currency, CURRENCIES):
 
     st.markdown("---")
 
-    # -------------------------
+    # ---------------------------------
     # Live Rate Viewer
-    # -------------------------
+    # ---------------------------------
     st.subheader("Live Exchange Rate")
 
-    compare = st.selectbox("Compare Against", CURRENCIES)
+    compare = st.selectbox("Compare Against", multi_currencies)
 
     if compare == base_currency:
         st.info("Select a different currency.")
@@ -40,5 +41,5 @@ def render(convert_to_base, base_currency, CURRENCIES):
 
     st.subheader("About")
     st.info(
-        "All amounts are converted into the base currency using live exchange rates from Exchange Rate Host API."
+        "All amounts are converted into the base currency using live exchange rates."
     )

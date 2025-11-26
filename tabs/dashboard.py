@@ -1,5 +1,7 @@
+# dashboard.py
 import streamlit as st
 import plotly.express as px
+import plotly.graph_objects as go
 import pandas as pd
 from datetime import datetime
 from core.analytics import (
@@ -9,11 +11,14 @@ from core.analytics import (
     forecast_next_month
 )
 
-def render(convert_to_base, base_currency):
+def render(convert_to_base, base_currency, current_user):
 
     st.header("Financial Dashboard")
 
-    totals = compute_totals(convert_to_base)
+    user_id = current_user["id"]
+
+    # All analytics now scoped by user
+    totals = compute_totals(convert_to_base, user_id=user_id)
 
     col1, col2, col3 = st.columns(3)
     col1.metric(f"Total Income ({base_currency})", totals["income"])
@@ -26,7 +31,7 @@ def render(convert_to_base, base_currency):
     # Monthly Summary
     # -----------------------------------------
     st.subheader("Monthly Income vs Expense")
-    monthly = monthly_summary(convert_to_base)
+    monthly = monthly_summary(convert_to_base, user_id=user_id)
 
     if monthly:
         months, incomes, expenses = [], [], []
@@ -49,7 +54,8 @@ def render(convert_to_base, base_currency):
             y=["Income", "Expense"],
             barmode="group",
             title="Monthly Income vs Expense",
-            color_discrete_map={"Income": "green", "Expense": "red"}
+            color_discrete_map={"Income": "green", "Expense": "red"},
+            text_auto = ".2f"
         )
 
         fig.update_layout(
@@ -67,7 +73,7 @@ def render(convert_to_base, base_currency):
     # Category Breakdown
     # -----------------------------------------
     st.subheader("Spending by Category")
-    breakdown = category_breakdown(convert_to_base)
+    breakdown = category_breakdown(convert_to_base, user_id=user_id)
 
     if breakdown:
         df = pd.DataFrame({
@@ -84,13 +90,13 @@ def render(convert_to_base, base_currency):
             y="Amount",
             text="Amount",
             title=f"Category Breakdown ({base_currency})",
+            text_auto=".2f"
         )
 
         fig.update_traces(marker_color=colors)
         fig.update_layout(showlegend=False)
 
         st.plotly_chart(fig, use_container_width=True)
-
     else:
         st.info("Not enough data for category breakdown.")
 
@@ -108,8 +114,18 @@ def render(convert_to_base, base_currency):
         })
 
         fig3 = px.line(
-            df_net, x="Month", y="Net Balance", markers=True,
+            df_net,
+            x="Month",
+            y="Net Balance",
+            markers=True,
             title="Net Balance Trend"
+        )
+
+        # Add labels above points
+        fig3.update_traces(
+            text=df_net["Net Balance"].apply(lambda v: f"{v:.2f}"),
+            textposition="top center",
+            mode="lines+markers+text"
         )
 
         st.plotly_chart(fig3, use_container_width=True)
@@ -122,7 +138,8 @@ def render(convert_to_base, base_currency):
     # Forecast
     # -----------------------------------------
     st.subheader("Next Month Forecast")
-    forecast_value = forecast_next_month(convert_to_base)
+
+    forecast_value = forecast_next_month(convert_to_base, user_id=user_id)
     delta = forecast_value - totals["net"]
 
     st.metric(

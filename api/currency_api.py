@@ -24,7 +24,7 @@ def get_currency_list():
 # ---------------------------------------------------------
 def fetch_rate_from_api(base: str, quote: str):
     """
-    Fetch live FX rate using /convert endpoint.
+    Fetch live exchange rate using /convert endpoint.
     Converts 1 QUOTE -> BASE.
     """
 

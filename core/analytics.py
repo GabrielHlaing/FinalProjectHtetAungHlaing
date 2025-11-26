@@ -1,7 +1,7 @@
 # analytics.py
 
 from typing import Dict, List
-from core.database import get_all_transactions
+from core.database import get_transactions_for_user
 
 
 # --------------------------------------------------
@@ -14,18 +14,13 @@ def _rows_to_dicts(rows) -> List[dict]:
 # --------------------------------------------------
 # Compute total income, expenses, net balance
 # --------------------------------------------------
-def compute_totals(convert_func) -> Dict[str, float]:
+def compute_totals(convert_func, user_id: int) -> Dict[str, float]:
     """
     convert_func(amount, currency) must convert to base currency.
 
-    Returns:
-    {
-        "income": float,
-        "expense": float,
-        "net": float
-    }
+    Returns totals for ONLY this user.
     """
-    rows = _rows_to_dicts(get_all_transactions())
+    rows = _rows_to_dicts(get_transactions_for_user(user_id))
 
     total_income = 0.0
     total_expense = 0.0
@@ -48,50 +43,47 @@ def compute_totals(convert_func) -> Dict[str, float]:
 # --------------------------------------------------
 # Breakdown by category
 # --------------------------------------------------
-def category_breakdown(convert_func):
+def category_breakdown(convert_func, user_id: int):
     """
-    Returns:
+    Returns breakdown for categories for this user only.
     {
         "Food": {"amount": 150.0, "type": "Expense"},
         "Salary": {"amount": 1000.0, "type": "Income"},
     }
     """
-
-    rows = _rows_to_dicts(get_all_transactions())
+    rows = _rows_to_dicts(get_transactions_for_user(user_id))
 
     breakdown = {}
 
     for row in rows:
         converted = convert_func(row["amount"], row["currency"])
         cat = row["category"]
-        t_type = row["t_type"]  # Income or Expense
+        t_type = row["t_type"]
 
         if cat not in breakdown:
             breakdown[cat] = {"amount": 0.0, "type": t_type}
 
-        # Keep the type from the first encounter of this category
         breakdown[cat]["amount"] += converted
 
-    # Round amounts
+    # Round results
     for cat in breakdown:
         breakdown[cat]["amount"] = round(breakdown[cat]["amount"], 2)
 
     return breakdown
 
 
-
 # --------------------------------------------------
 # Monthly stats (grouping algorithm)
 # --------------------------------------------------
-def monthly_summary(convert_func) -> Dict[str, Dict[str, float]]:
+def monthly_summary(convert_func, user_id: int) -> Dict[str, Dict[str, float]]:
     """
-    Returns a structure like:
+    Returns month → income/expense for this user:
     {
         "2025-01": {"income": 1500, "expense": 300},
         "2025-02": {"income": 1400, "expense": 400},
     }
     """
-    rows = _rows_to_dicts(get_all_transactions())
+    rows = _rows_to_dicts(get_transactions_for_user(user_id))
     summary = {}
 
     for row in rows:
@@ -106,39 +98,36 @@ def monthly_summary(convert_func) -> Dict[str, Dict[str, float]]:
         else:
             summary[month_key]["expense"] += converted
 
-    # Round values
-    for key in summary:
-        summary[key]["income"] = round(summary[key]["income"], 2)
-        summary[key]["expense"] = round(summary[key]["expense"], 2)
+    # Round
+    for m in summary:
+        summary[m]["income"] = round(summary[m]["income"], 2)
+        summary[m]["expense"] = round(summary[m]["expense"], 2)
 
     return summary
 
 
 # --------------------------------------------------
-# Basic forecast (simple moving average)
+# Forecast (simple average of last N months)
 # --------------------------------------------------
-def forecast_next_month(convert_func, months: int = 3) -> float:
+def forecast_next_month(convert_func, user_id: int, months: int = 3) -> float:
     """
-    Predicts next month's net balance using the average
-    of the last N months.
+    Predicts next month's net balance using average
+    of last N months for THIS user only.
     """
-    monthly = monthly_summary(convert_func)
+    monthly = monthly_summary(convert_func, user_id)
 
     if len(monthly) == 0:
         return 0.0
 
-    # Sort months chronologically
     sorted_keys = sorted(monthly.keys())
-
-    # Take last N months
     recent = sorted_keys[-months:]
 
-    nets = []
-    for m in recent:
-        nets.append(monthly[m]["income"] - monthly[m]["expense"])
+    nets = [
+        monthly[m]["income"] - monthly[m]["expense"]
+        for m in recent
+    ]
 
-    if len(nets) == 0:
+    if not nets:
         return 0.0
 
     return round(sum(nets) / len(nets), 2)
-
