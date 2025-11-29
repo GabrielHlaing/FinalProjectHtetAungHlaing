@@ -40,6 +40,9 @@ def render(multi_currencies, current_user):
 
     st.header("Manage Transactions")
 
+    # Show all flash messages
+    show_message()
+
     tabA, tabB, tabC = st.tabs(
         ["Add Transaction", "View Transactions", "Edit/Delete"]
     )
@@ -49,8 +52,6 @@ def render(multi_currencies, current_user):
     # ======================================================
     with tabA:
         st.subheader("Add New Transaction")
-
-        show_message()
 
         # unique key for form reset
         form_key = f"add_form_reset_{st.session_state.get('form_reset', 0)}"
@@ -90,8 +91,6 @@ def render(multi_currencies, current_user):
     with tabB:
         st.subheader("All Transactions")
 
-        show_message()
-
         rows = get_transactions_for_user(user_id)
 
         if not rows:
@@ -106,8 +105,6 @@ def render(multi_currencies, current_user):
     # ======================================================
     with tabC:
         st.subheader("Edit or Delete Transactions")
-
-        show_message()
 
         rows = get_transactions_for_user(user_id)
 
