@@ -28,11 +28,6 @@ class Transaction:
         if amount <= 0:
             raise ValidationError("Amount must be greater than zero.")
 
-    @staticmethod
-    def validate_currency(currency: str):
-        valid_currencies = ["USD", "MMK", "EUR"]  # Expand later
-        if currency not in valid_currencies:
-            raise ValidationError(f"Unsupported currency: {currency}")
 
     @staticmethod
     def validate_category(category: str):
@@ -57,7 +52,6 @@ class Transaction:
 
         cls.validate_type(t_type)
         cls.validate_amount(amount)
-        cls.validate_currency(currency)
         cls.validate_category(category)
         date_parsed = cls.validate_date(date_input)
 

@@ -33,7 +33,8 @@ def init_db():
             amount REAL NOT NULL,
             currency TEXT NOT NULL,
             category TEXT NOT NULL,
-            date TEXT NOT NULL
+            date TEXT NOT NULL,
+            user_id INTEGER
         );
     """)
 

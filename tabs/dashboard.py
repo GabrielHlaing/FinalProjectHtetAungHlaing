@@ -53,7 +53,7 @@ def render(convert_to_base, base_currency, current_user):
             x="Month",
             y=["Income", "Expense"],
             barmode="group",
-            title="Monthly Income vs Expense",
+            title=f"Monthly Income vs Expense ({base_currency})",
             color_discrete_map={"Income": "green", "Expense": "red"},
             text_auto = ".2f"
         )
@@ -84,7 +84,7 @@ def render(convert_to_base, base_currency, current_user):
 
         colors = ["green" if t == "Income" else "red" for t in df["Type"]]
 
-        fig = px.bar(
+        fig2 = px.bar(
             df,
             x="Category",
             y="Amount",
@@ -93,10 +93,16 @@ def render(convert_to_base, base_currency, current_user):
             text_auto=".2f"
         )
 
-        fig.update_traces(marker_color=colors)
-        fig.update_layout(showlegend=False)
+        fig2.update_traces(marker_color=colors)
 
-        st.plotly_chart(fig, use_container_width=True)
+        fig2.update_layout(
+            yaxis_title=f"Amount ({base_currency})",
+            bargap=0.25,
+            showlegend = False
+        )
+
+
+        st.plotly_chart(fig2, use_container_width=True)
     else:
         st.info("Not enough data for category breakdown.")
 
@@ -118,7 +124,12 @@ def render(convert_to_base, base_currency, current_user):
             x="Month",
             y="Net Balance",
             markers=True,
-            title="Net Balance Trend"
+            title=f"Net Balance Trend ({base_currency})"
+        )
+
+        fig3.update_layout(
+            yaxis_title=f"Net Balance ({base_currency})",
+            bargap=0.25
         )
 
         # Add labels above points

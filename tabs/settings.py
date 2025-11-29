@@ -41,5 +41,5 @@ def render(base_currency, multi_currencies):
 
     st.subheader("About")
     st.info(
-        "All amounts are converted into the base currency using live exchange rates."
+        "All amounts are converted into the base currency using live exchange rates from [ExchangeRate Host](https://exchangerate.host/)."
     )
