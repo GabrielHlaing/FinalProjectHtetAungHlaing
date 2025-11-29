@@ -100,7 +100,7 @@ Htet Aung Hlaing
 - 1.0 
 
 ## Acknowledgments
-- [Streamlit Documentation](9https://docs.streamlit.io/)
+- [Streamlit Documentation](https://docs.streamlit.io/)
 - [Plotly Express](https://plotly.com/python/plotly-express/)
 - [SQLite](https://www.sqlite.org/)
 - [Exchange Host API](https://exchangerate.host/)
